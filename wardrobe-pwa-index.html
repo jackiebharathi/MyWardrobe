@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Organize your wardrobe and create perfect outfit combinations">
+    <meta name="theme-color" content="#9333ea">
+    <title>My Wardrobe App</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        .hidden {
+            display: none;
+        }
+        .item-card {
+            position: relative;
+            overflow: hidden;
+        }
+        .delete-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .item-card:hover .delete-btn {
+            opacity: 1;
+        }
+        .install-prompt {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: #9333ea;
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .install-prompt.show {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen">
+    <!-- Install Prompt -->
+    <div id="installPrompt" class="install-prompt">
+        <div>
+            <div class="font-bold mb-1">Install Wardrobe App</div>
+            <div class="text-sm opacity-90">Add to your home screen for easy access</div>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="installApp()" class="bg-white text-purple-600 px-4 py-2 rounded-lg font-semibold">Install</button>
+            <button onclick="dismissInstall()" class="bg-purple-700 px-4 py-2 rounded-lg">Later</button>
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto p-4">
+        <!-- Header -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">👔 My Wardrobe</h1>
+            <p class="text-gray-600">Upload your clothes and create perfect outfit combinations</p>
+        </div>
+
+        <!-- Navigation -->
+        <div class="flex gap-4 mb-6">
+            <button onclick="showUploadView()" id="uploadBtn" class="flex-1 py-3 px-6 rounded-xl font-semibold transition bg-purple-600 text-white shadow-lg">
+                📤 Upload Items
+            </button>
+            <button onclick="showMapView()" id="mapBtn" class="flex-1 py-3 px-6 rounded-xl font-semibold transition bg-white text-gray-700 hover:bg-gray-50">
+                👁️ Pairing Map
+            </button>
+        </div>
+
+        <!-- Upload View -->
+        <div id="uploadView">
+            <!-- Pants Section -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">👖 Pants</h2>
+                    <label class="bg-purple-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-purple-700 transition">
+                        ➕ Add Pants
+                        <input type="file" accept="image/*" multiple onchange="handleUpload(event, 'pants')" class="hidden">
+                    </label>
+                </div>
+                <div id="pantsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div class="col-span-full text-center py-8 text-gray-400">
+                        No pants uploaded yet. Click "Add Pants" to start!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shirts Section -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">👕 Shirts</h2>
+                    <label class="bg-purple-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-purple-700 transition">
+                        ➕ Add Shirts
+                        <input type="file" accept="image/*" multiple onchange="handleUpload(event, 'shirts')" class="hidden">
+                    </label>
+                </div>
+                <div id="shirtsGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div class="col-span-full text-center py-8 text-gray-400">
+                        No shirts uploaded yet. Click "Add Shirts" to start!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shoes Section -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">👟 Shoes</h2>
+                    <label class="bg-purple-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-purple-700 transition">
+                        ➕ Add Shoes
+                        <input type="file" accept="image/*" multiple onchange="handleUpload(event, 'shoes')" class="hidden">
+                    </label>
+                </div>
+                <div id="shoesGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div class="col-span-full text-center py-8 text-gray-400">
+                        No shoes uploaded yet. Click "Add Shoes" to start!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accessories Section -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-800">🎒 Accessories</h2>
+                    <label class="bg-purple-600 text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-purple-700 transition">
+                        ➕ Add Accessories
+                        <input type="file" accept="image/*" multiple onchange="handleUpload(event, 'accessories')" class="hidden">
+                    </label>
+                </div>
+                <div id="accessoriesGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    <div class="col-span-full text-center py-8 text-gray-400">
+                        No accessories uploaded yet. Click "Add Accessories" to start!
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map View -->
+        <div id="mapView" class="hidden">
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">🗺️ Pairing Map</h2>
+                    <button onclick="toggleAllPants()" id="toggleBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition hidden">
+                        Show All Pants
+                    </button>
+                </div>
+                <div id="mapContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // PWA Installation
+        let deferredPrompt;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').classList.add('show');
+        });
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    }
+                    deferredPrompt = null;
+                    document.getElementById('installPrompt').classList.remove('show');
+                });
+            }
+        }
+
+        function dismissInstall() {
+            document.getElementById('installPrompt').classList.remove('show');
+        }
+
+        // Storage
+        let wardrobeData = {
+            items: [],
+            pairings: {}
+        };
+
+        // Load from localStorage on start
+        function loadData() {
+            const saved = localStorage.getItem('wardrobeData');
+            if (saved) {
+                wardrobeData = JSON.parse(saved);
+                renderAllCategories();
+            }
+        }
+
+        // Save to localStorage
+        function saveData() {
+            localStorage.setItem('wardrobeData', JSON.stringify(wardrobeData));
+        }
+
+        // Handle image upload
+        function handleUpload(event, category) {
+            const files = Array.from(event.target.files);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const newItem = {
+                        id: Date.now() + Math.random(),
+                        category: category,
+                        image: e.target.result,
+                        name: file.name
+                    };
+                    wardrobeData.items.push(newItem);
+                    saveData();
+                    renderCategory(category);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Delete item
+        function deleteItem(id) {
+            if (confirm('Delete this item?')) {
+                wardrobeData.items = wardrobeData.items.filter(item => item.id !== id);
+                delete wardrobeData.pairings[id];
+                Object.keys(wardrobeData.pairings).forEach(key => {
+                    wardrobeData.pairings[key] = wardrobeData.pairings[key].filter(pairId => pairId !== id);
+                });
+                saveData();
+                renderAllCategories();
+                if (document.getElementById('mapView').classList.contains('hidden') === false) {
+                    renderMap();
+                }
+            }
+        }
+
+        // Render category grid
+        function renderCategory(category) {
+            const grid = document.getElementById(category + 'Grid');
+            const items = wardrobeData.items.filter(item => item.category === category);
+            
+            if (items.length === 0) {
+                const emoji = category === 'pants' ? '👖' : category === 'shirts' ? '👕' : category === 'shoes' ? '👟' : '🎒';
+                grid.innerHTML = `<div class="col-span-full text-center py-8 text-gray-400">
+                    <div class="text-4xl mb-2">${emoji}</div>
+                    No ${category} uploaded yet. Click "Add ${category.charAt(0).toUpperCase() + category.slice(1)}" to start!
+                </div>`;
+            } else {
+                grid.innerHTML = items.map(item => `
+                    <div class="item-card relative group">
+                        <img src="${item.image}" alt="${item.name}" class="w-full h-40 object-cover rounded-lg shadow-md">
+                        <button onclick="deleteItem('${item.id}')" class="delete-btn absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
+                            🗑️
+                        </button>
+                    </div>
+                `).join('');
+            }
+        }
+
+        // Render all categories
+        function renderAllCategories() {
+            ['pants', 'shirts', 'shoes', 'accessories'].forEach(cat => renderCategory(cat));
+        }
+
+        // Toggle pairing
+        function togglePairing(pantId, shirtId) {
+            if (!wardrobeData.pairings[pantId]) {
+                wardrobeData.pairings[pantId] = [];
+            }
+            const index = wardrobeData.pairings[pantId].indexOf(shirtId);
+            if (index > -1) {
+                wardrobeData.pairings[pantId].splice(index, 1);
+            } else {
+                wardrobeData.pairings[pantId].push(shirtId);
+            }
+            saveData();
+            renderMap();
+        }
+
+        // Show upload view
+        function showUploadView() {
+            document.getElementById('uploadView').classList.remove('hidden');
+            document.getElementById('mapView').classList.add('hidden');
+            document.getElementById('uploadBtn').className = 'flex-1 py-3 px-6 rounded-xl font-semibold transition bg-purple-600 text-white shadow-lg';
+            document.getElementById('mapBtn').className = 'flex-1 py-3 px-6 rounded-xl font-semibold transition bg-white text-gray-700 hover:bg-gray-50';
+        }
+
+        // Show map view
+        function showMapView() {
+            document.getElementById('uploadView').classList.add('hidden');
+            document.getElementById('mapView').classList.remove('hidden');
+            document.getElementById('uploadBtn').className = 'flex-1 py-3 px-6 rounded-xl font-semibold transition bg-white text-gray-700 hover:bg-gray-50';
+            document.getElementById('mapBtn').className = 'flex-1 py-3 px-6 rounded-xl font-semibold transition bg-purple-600 text-white shadow-lg';
+            renderMap();
+        }
+
+        // Toggle between single and all pants view
+        let showingAllPants = false;
+        let selectedPantId = null;
+
+        function toggleAllPants() {
+            showingAllPants = !showingAllPants;
+            renderMap();
+        }
+
+        // Render pairing map
+        function renderMap() {
+            const pants = wardrobeData.items.filter(item => item.category === 'pants');
+            const shirts = wardrobeData.items.filter(item => item.category === 'shirts');
+            const mapContent = document.getElementById('mapContent');
+            const toggleBtn = document.getElementById('toggleBtn');
+
+            if (pants.length === 0) {
+                mapContent.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">👖</div>
+                        <p class="text-xl text-gray-600 mb-2">No pants uploaded yet!</p>
+                        <p class="text-gray-500">Go to Upload Items and add some pants first</p>
+                    </div>
+                `;
+                toggleBtn.classList.add('hidden');
+                return;
+            }
+
+            if (shirts.length === 0) {
+                mapContent.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-6xl mb-4">👕</div>
+                        <p class="text-xl text-gray-600 mb-2">No shirts uploaded yet!</p>
+                        <p class="text-gray-500">Go to Upload Items and add some shirts to pair with your pants</p>
+                    </div>
+                `;
+                toggleBtn.classList.add('hidden');
+                return;
+            }
+
+            toggleBtn.classList.remove('hidden');
+            toggleBtn.textContent = showingAllPants ? '📱 Show Single Pant' : '📊 Show All Pants';
+
+            if (showingAllPants) {
+                renderAllPantsView(pants, shirts, mapContent);
+            } else {
+                renderSinglePantView(pants, shirts, mapContent);
+            }
+        }
+
+        function renderSinglePantView(pants, shirts, mapContent) {
+            if (!selectedPantId && pants.length > 0) {
+                selectedPantId = pants[0].id;
+            }
+
+            const pantOptions = pants.map((pant, idx) => 
+                `<option value="${pant.id}" ${pant.id === selectedPantId ? 'selected' : ''}>Pant ${idx + 1}</option>`
+            ).join('');
+
+            const selectedPant = pants.find(p => p.id === selectedPantId);
+            const pairedShirts = (wardrobeData.pairings[selectedPantId] || [])
+                .map(id => shirts.find(s => s.id === id))
+                .filter(Boolean);
+            const unpaired = shirts.filter(s => !(wardrobeData.pairings[selectedPantId] || []).includes(s.id));
+
+            mapContent.innerHTML = `
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-semibold mb-2">Select a Pant:</label>
+                    <select onchange="selectedPantId='${selectedPantId}';this.value!==selectedPantId&&(selectedPantId=this.value,renderMap())" class="w-full p-3 border border-gray-300 rounded-lg">
+                        ${pantOptions}
+                    </select>
+                </div>
+                <div class="border-2 border-gray-200 rounded-xl p-6">
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="flex-shrink-0">
+                            <img src="${selectedPant.image}" class="w-40 h-40 object-cover rounded-lg shadow-md">
+                            <p class="text-center mt-2 font-semibold text-gray-700">Selected Pant</p>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-green-600 mb-3">✓ Paired Shirts (${pairedShirts.length})</h3>
+                            ${pairedShirts.length > 0 ? `
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                                    ${pairedShirts.map(shirt => `
+                                        <div class="relative">
+                                            <img src="${shirt.image}" class="w-full h-28 object-cover rounded-lg shadow border-2 border-green-400">
+                                            <button onclick="togglePairing('${selectedPantId}','${shirt.id}')" class="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow-lg">
+                                                ➖
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : '<p class="text-gray-500 mb-6 italic">No shirts paired yet. Add some below!</p>'}
+                            <h3 class="text-xl font-bold text-gray-600 mb-3">Available Shirts - Click + to Pair (${unpaired.length})</h3>
+                            ${unpaired.length > 0 ? `
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    ${unpaired.map(shirt => `
+                                        <div class="relative opacity-60 hover:opacity-100 transition cursor-pointer">
+                                            <img src="${shirt.image}" class="w-full h-28 object-cover rounded-lg shadow">
+                                            <button onclick="togglePairing('${selectedPantId}','${shirt.id}')" class="absolute top-1 right-1 bg-green-500 text-white p-1.5 rounded-full hover:bg-green-600 shadow-lg">
+                                                ➕
+                                            </button>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : '<p class="text-gray-500 italic">All shirts are already paired!</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAllPantsView(pants, shirts, mapContent) {
+            mapContent.innerHTML = `
+                <div class="space-y-8">
+                    ${pants.map((pant, idx) => {
+                        const pairedShirts = (wardrobeData.pairings[pant.id] || [])
+                            .map(id => shirts.find(s => s.id === id))
+                            .filter(Boolean);
+                        const unpaired = shirts.filter(s => !(wardrobeData.pairings[pant.id] || []).includes(s.id));
+
+                        return `
+                            <div class="border-2 border-gray-200 rounded-xl p-6">
+                                <div class="flex flex-col md:flex-row gap-6">
+                                    <div class="flex-shrink-0">
+                                        <img src="${pant.image}" class="w-32 h-32 object-cover rounded-lg shadow-md">
+                                        <p class="text-center mt-2 font-semibold text-gray-700">Pant ${idx + 1}</p>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h3 class="text-lg font-bold text-green-600 mb-3">✓ Paired (${pairedShirts.length})</h3>
+                                        ${pairedShirts.length > 0 ? `
+                                            <div class="grid grid-cols-3 md:grid-cols-5 gap-3 mb-4">
+                                                ${pairedShirts.map(shirt => `
+                                                    <div class="relative">
+                                                        <img src="${shirt.image}" class="w-full h-20 object-cover rounded-lg shadow border-2 border-green-400">
+                                                        <button onclick="togglePairing('${pant.id}','${shirt.id}')" class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600">
+                                                            ➖
+                                                        </button>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        ` : '<p class="text-gray-500 mb-4 text-sm italic">No pairings yet</p>'}
+                                        <h3 class="text-lg font-bold text-gray-600 mb-3">Not Paired (${unpaired.length})</h3>
+                                        ${unpaired.length > 0 ? `
+                                            <div class="grid grid-cols-3 md:grid-cols-5 gap-3">
+                                                ${unpaired.map(shirt => `
+                                                    <div class="relative opacity-60 hover:opacity-100 transition">
+                                                        <img src="${shirt.image}" class="w-full h-20 object-cover rounded-lg shadow">
+                                                        <button onclick="togglePairing('${pant.id}','${shirt.id}')" class="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full hover:bg-green-600">
+                                                            ➕
+                                                        </button>
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        ` : '<p class="text-gray-500 text-sm italic">All paired!</p>'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        // Initialize
+        loadData();
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {
+                console.log('Service worker registration failed');
+            });
+        }
+    </script>
+</body>
+</html>
