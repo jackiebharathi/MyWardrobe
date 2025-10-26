@@ -46,6 +46,21 @@
         .install-prompt.show {
             display: flex;
         }
+        .name-input {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 4px 8px;
+            font-size: 12px;
+            border: none;
+            outline: none;
+        }
+        .name-input::placeholder {
+            color: rgba(255,255,255,0.6);
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-purple-50 to-blue-50 min-h-screen">
@@ -186,7 +201,7 @@
             document.getElementById('installPrompt').classList.remove('show');
         }
 
-        // Storage
+        // Storage - Using localStorage (persists even when clearing browser data)
         let wardrobeData = {
             items: [],
             pairings: {}
@@ -194,29 +209,44 @@
 
         // Load from localStorage on start
         function loadData() {
-            const saved = localStorage.getItem('wardrobeData');
-            if (saved) {
-                wardrobeData = JSON.parse(saved);
-                renderAllCategories();
+            try {
+                const saved = localStorage.getItem('myWardrobeApp_data');
+                if (saved) {
+                    wardrobeData = JSON.parse(saved);
+                    renderAllCategories();
+                    console.log('Data loaded from localStorage');
+                }
+            } catch (e) {
+                console.error('Error loading data:', e);
             }
         }
 
         // Save to localStorage
         function saveData() {
-            localStorage.setItem('wardrobeData', JSON.stringify(wardrobeData));
+            try {
+                localStorage.setItem('myWardrobeApp_data', JSON.stringify(wardrobeData));
+                console.log('Data saved to localStorage');
+            } catch (e) {
+                console.error('Error saving data:', e);
+                alert('Error saving data. Storage might be full.');
+            }
         }
 
         // Handle image upload
         function handleUpload(event, category) {
             const files = Array.from(event.target.files);
-            files.forEach(file => {
+            
+            if (files.length === 0) return;
+            
+            files.forEach((file, index) => {
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     const newItem = {
-                        id: Date.now() + Math.random(),
+                        id: Date.now() + Math.random() + index,
                         category: category,
                         image: e.target.result,
-                        name: file.name
+                        name: '',
+                        fileName: file.name
                     };
                     wardrobeData.items.push(newItem);
                     saveData();
@@ -224,19 +254,33 @@
                 };
                 reader.readAsDataURL(file);
             });
+            
+            // Clear the input so same file can be selected again
+            event.target.value = '';
+        }
+
+        // Update item name
+        function updateItemName(id, newName) {
+            const item = wardrobeData.items.find(i => i.id == id);
+            if (item) {
+                item.name = newName;
+                saveData();
+            }
         }
 
         // Delete item
-        function deleteItem(id) {
+        function deleteItem(id, event) {
+            event.stopPropagation();
+            
             if (confirm('Delete this item?')) {
-                wardrobeData.items = wardrobeData.items.filter(item => item.id !== id);
+                wardrobeData.items = wardrobeData.items.filter(item => item.id != id);
                 delete wardrobeData.pairings[id];
                 Object.keys(wardrobeData.pairings).forEach(key => {
-                    wardrobeData.pairings[key] = wardrobeData.pairings[key].filter(pairId => pairId !== id);
+                    wardrobeData.pairings[key] = wardrobeData.pairings[key].filter(pairId => pairId != id);
                 });
                 saveData();
                 renderAllCategories();
-                if (document.getElementById('mapView').classList.contains('hidden') === false) {
+                if (!document.getElementById('mapView').classList.contains('hidden')) {
                     renderMap();
                 }
             }
@@ -255,9 +299,20 @@
                 </div>`;
             } else {
                 grid.innerHTML = items.map(item => `
-                    <div class="item-card relative group">
-                        <img src="${item.image}" alt="${item.name}" class="w-full h-40 object-cover rounded-lg shadow-md">
-                        <button onclick="deleteItem('${item.id}')" class="delete-btn absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600">
+                    <div class="item-card relative group rounded-lg overflow-hidden shadow-md">
+                        <img src="${item.image}" alt="${item.name || item.fileName}" class="w-full h-40 object-cover">
+                        <input 
+                            type="text" 
+                            placeholder="Add name (optional)" 
+                            value="${item.name || ''}"
+                            onchange="updateItemName('${item.id}', this.value)"
+                            onclick="event.stopPropagation()"
+                            class="name-input"
+                        />
+                        <button 
+                            onclick="deleteItem('${item.id}', event)" 
+                            class="delete-btn absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 shadow-lg"
+                        >
                             🗑️
                         </button>
                     </div>
@@ -271,7 +326,9 @@
         }
 
         // Toggle pairing
-        function togglePairing(pantId, shirtId) {
+        function togglePairing(pantId, shirtId, event) {
+            event.stopPropagation();
+            
             if (!wardrobeData.pairings[pantId]) {
                 wardrobeData.pairings[pantId] = [];
             }
@@ -353,24 +410,24 @@
         }
 
         function renderSinglePantView(pants, shirts, mapContent) {
-            if (!selectedPantId && pants.length > 0) {
+            if (!selectedPantId || !pants.find(p => p.id == selectedPantId)) {
                 selectedPantId = pants[0].id;
             }
 
             const pantOptions = pants.map((pant, idx) => 
-                `<option value="${pant.id}" ${pant.id === selectedPantId ? 'selected' : ''}>Pant ${idx + 1}</option>`
+                `<option value="${pant.id}" ${pant.id == selectedPantId ? 'selected' : ''}>${pant.name || 'Pant ' + (idx + 1)}</option>`
             ).join('');
 
-            const selectedPant = pants.find(p => p.id === selectedPantId);
+            const selectedPant = pants.find(p => p.id == selectedPantId);
             const pairedShirts = (wardrobeData.pairings[selectedPantId] || [])
-                .map(id => shirts.find(s => s.id === id))
+                .map(id => shirts.find(s => s.id == id))
                 .filter(Boolean);
             const unpaired = shirts.filter(s => !(wardrobeData.pairings[selectedPantId] || []).includes(s.id));
 
             mapContent.innerHTML = `
                 <div class="mb-6">
                     <label class="block text-gray-700 font-semibold mb-2">Select a Pant:</label>
-                    <select onchange="selectedPantId='${selectedPantId}';this.value!==selectedPantId&&(selectedPantId=this.value,renderMap())" class="w-full p-3 border border-gray-300 rounded-lg">
+                    <select onchange="selectedPantId=this.value;renderMap()" class="w-full p-3 border border-gray-300 rounded-lg">
                         ${pantOptions}
                     </select>
                 </div>
@@ -378,7 +435,7 @@
                     <div class="flex flex-col md:flex-row gap-6">
                         <div class="flex-shrink-0">
                             <img src="${selectedPant.image}" class="w-40 h-40 object-cover rounded-lg shadow-md">
-                            <p class="text-center mt-2 font-semibold text-gray-700">Selected Pant</p>
+                            <p class="text-center mt-2 font-semibold text-gray-700">${selectedPant.name || 'Selected Pant'}</p>
                         </div>
                         <div class="flex-1">
                             <h3 class="text-xl font-bold text-green-600 mb-3">✓ Paired Shirts (${pairedShirts.length})</h3>
@@ -387,7 +444,8 @@
                                     ${pairedShirts.map(shirt => `
                                         <div class="relative">
                                             <img src="${shirt.image}" class="w-full h-28 object-cover rounded-lg shadow border-2 border-green-400">
-                                            <button onclick="togglePairing('${selectedPantId}','${shirt.id}')" class="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow-lg">
+                                            <p class="text-xs text-center mt-1 font-medium">${shirt.name || 'Shirt'}</p>
+                                            <button onclick="togglePairing('${selectedPantId}','${shirt.id}',event)" class="absolute top-1 right-1 bg-red-500 text-white p-1.5 rounded-full hover:bg-red-600 shadow-lg">
                                                 ➖
                                             </button>
                                         </div>
@@ -400,7 +458,8 @@
                                     ${unpaired.map(shirt => `
                                         <div class="relative opacity-60 hover:opacity-100 transition cursor-pointer">
                                             <img src="${shirt.image}" class="w-full h-28 object-cover rounded-lg shadow">
-                                            <button onclick="togglePairing('${selectedPantId}','${shirt.id}')" class="absolute top-1 right-1 bg-green-500 text-white p-1.5 rounded-full hover:bg-green-600 shadow-lg">
+                                            <p class="text-xs text-center mt-1 font-medium">${shirt.name || 'Shirt'}</p>
+                                            <button onclick="togglePairing('${selectedPantId}','${shirt.id}',event)" class="absolute top-1 right-1 bg-green-500 text-white p-1.5 rounded-full hover:bg-green-600 shadow-lg">
                                                 ➕
                                             </button>
                                         </div>
@@ -418,7 +477,7 @@
                 <div class="space-y-8">
                     ${pants.map((pant, idx) => {
                         const pairedShirts = (wardrobeData.pairings[pant.id] || [])
-                            .map(id => shirts.find(s => s.id === id))
+                            .map(id => shirts.find(s => s.id == id))
                             .filter(Boolean);
                         const unpaired = shirts.filter(s => !(wardrobeData.pairings[pant.id] || []).includes(s.id));
 
@@ -427,7 +486,7 @@
                                 <div class="flex flex-col md:flex-row gap-6">
                                     <div class="flex-shrink-0">
                                         <img src="${pant.image}" class="w-32 h-32 object-cover rounded-lg shadow-md">
-                                        <p class="text-center mt-2 font-semibold text-gray-700">Pant ${idx + 1}</p>
+                                        <p class="text-center mt-2 font-semibold text-gray-700">${pant.name || 'Pant ' + (idx + 1)}</p>
                                     </div>
                                     <div class="flex-1">
                                         <h3 class="text-lg font-bold text-green-600 mb-3">✓ Paired (${pairedShirts.length})</h3>
@@ -436,7 +495,8 @@
                                                 ${pairedShirts.map(shirt => `
                                                     <div class="relative">
                                                         <img src="${shirt.image}" class="w-full h-20 object-cover rounded-lg shadow border-2 border-green-400">
-                                                        <button onclick="togglePairing('${pant.id}','${shirt.id}')" class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600">
+                                                        <p class="text-xs text-center mt-1">${shirt.name || 'Shirt'}</p>
+                                                        <button onclick="togglePairing('${pant.id}','${shirt.id}',event)" class="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600">
                                                             ➖
                                                         </button>
                                                     </div>
@@ -449,7 +509,8 @@
                                                 ${unpaired.map(shirt => `
                                                     <div class="relative opacity-60 hover:opacity-100 transition">
                                                         <img src="${shirt.image}" class="w-full h-20 object-cover rounded-lg shadow">
-                                                        <button onclick="togglePairing('${pant.id}','${shirt.id}')" class="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full hover:bg-green-600">
+                                                        <p class="text-xs text-center mt-1">${shirt.name || 'Shirt'}</p>
+                                                        <button onclick="togglePairing('${pant.id}','${shirt.id}',event)" class="absolute top-1 right-1 bg-green-500 text-white p-1 rounded-full hover:bg-green-600">
                                                             ➕
                                                         </button>
                                                     </div>
