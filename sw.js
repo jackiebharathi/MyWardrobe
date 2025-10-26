@@ -1,11 +1,10 @@
 const CACHE_NAME = 'wardrobe-app-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json'
+  '/MyWardrobe/',
+  '/MyWardrobe/index.html',
+  '/MyWardrobe/manifest.json'
 ];
 
-// Install service worker
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -13,7 +12,6 @@ self.addEventListener('install', event => {
   );
 });
 
-// Fetch resources
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
@@ -21,7 +19,6 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Activate and clean up old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
